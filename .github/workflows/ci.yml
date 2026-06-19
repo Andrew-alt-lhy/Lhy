@@ -26,7 +26,7 @@ jobs:
         run: pytest -v
 
   build:
-    name: Build and Package Docker Image
+    name: Build Docker Image
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -35,51 +35,3 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t simple-web:latest .
-
-      - name: Export and compress Docker image
-        run: docker save simple-web:latest | gzip > simple-web.tar.gz
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image
-          path: simple-web.tar.gz
-          retention-days: 7
-
-  deploy:
-    name: Deploy to Server
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image
-
-      - name: Transfer image via SCP
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "simple-web.tar.gz"
-          target: "/tmp/"
-
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /tmp
-            rm -f simple-web.tar
-            gunzip -f simple-web.tar.gz
-            docker load -i simple-web.tar
-            rm -f simple-web.tar simple-web.tar.gz
-            cd /root
-            docker-compose -f docker-compose.prod.yml down || true
-            docker-compose -f docker-compose.prod.yml up -d
