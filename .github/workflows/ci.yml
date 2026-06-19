@@ -81,6 +81,12 @@ jobs:
             docker load -i simple-web.tar
             rm -f simple-web.tar simple-web.tar.gz
             cd /root
-            docker-compose -f docker-compose.prod.yml down || true
-            docker-compose -f docker-compose.prod.yml up -d
+            # 尝试使用 docker compose（新方式），如果失败则用 docker-compose（旧方式）
+            if command -v docker-compose &> /dev/null; then
+              docker-compose -f docker-compose.prod.yml down || true
+              docker-compose -f docker-compose.prod.yml up -d
+            else
+              docker compose -f docker-compose.prod.yml down || true
+              docker compose -f docker-compose.prod.yml up -d
+            fi
           ENDSSH
