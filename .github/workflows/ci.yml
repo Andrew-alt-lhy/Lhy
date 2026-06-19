@@ -33,22 +33,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          load: true
-          tags: simple-web:latest
+        run: docker build -t simple-web:latest .
 
-      - name: Export Docker image
-        run: docker save simple-web:latest -o simple-web.tar
-
-      - name: Compress image
-        run: gzip simple-web.tar
+      - name: Export and compress Docker image
+        run: docker save simple-web:latest | gzip > simple-web.tar.gz
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
