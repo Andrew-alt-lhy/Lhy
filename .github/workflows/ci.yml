@@ -59,27 +59,27 @@ jobs:
         with:
           name: docker-image
 
-      - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
       - name: Transfer image via SCP
-        run: scp simple-web.tar.gz ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/tmp/
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "simple-web.tar.gz"
+          target: "/tmp/"
 
-      - name: Deploy via SSH
-        run: |
-          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
             cd /tmp
+            rm -f simple-web.tar
             gunzip -f simple-web.tar.gz
             docker load -i simple-web.tar
-            rm simple-web.tar simple-web.tar.gz
+            rm -f simple-web.tar simple-web.tar.gz
             cd /root
-            docker-compose -f docker-compose.prod.yml down
+            docker-compose -f docker-compose.prod.yml down || true
             docker-compose -f docker-compose.prod.yml up -d
-          ENDSSH
